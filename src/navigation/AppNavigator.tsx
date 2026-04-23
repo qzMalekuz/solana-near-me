@@ -5,7 +5,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { SolanaColors, createDarkGlassEffect } from "../lib/theme";
+import { SolanaColors } from "../lib/theme";
 import { UI_CONSTANTS } from "../lib/utils/constants";
 import { locationService } from "../lib/services/locationService";
 import { RootStackParamList } from "../lib/types";
@@ -66,18 +66,20 @@ function MainTabNavigator() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          ...createDarkGlassEffect(0.5),
+          backgroundColor: "#111111",
           borderTopWidth: 0,
-          borderRadius: 20,
           height: UI_CONSTANTS.BOTTOM_TAB_HEIGHT + insets.bottom,
-          paddingBottom: insets.bottom + 8,
+          paddingBottom: insets.bottom,
           paddingTop: 8,
           position: "absolute",
-          bottom: 16,
-          left: 16,
-          right: 16,
-          marginHorizontal: 0,
-          marginBottom: 0,
+          bottom: 0,
+          left: 0,
+          right: 0,
+          elevation: 16,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: 0.5,
+          shadowRadius: 12,
         },
         tabBarActiveTintColor: SolanaColors.primary,
         tabBarInactiveTintColor: SolanaColors.text.secondary,
@@ -89,7 +91,6 @@ function MainTabNavigator() {
         tabBarIconStyle: {
           marginTop: 4,
         },
-        tabBarBackground: () => null,
       }}
       initialRouteName={hasLocationPermission ? "Map" : "Dashboard"}
     >

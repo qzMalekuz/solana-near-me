@@ -3,13 +3,13 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   FlatList,
   RefreshControl,
   TextInput,
   ActivityIndicator,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../../lib/types";
 import { SolanaColors, Typography, Spacing } from "../../lib/theme";
@@ -91,10 +91,11 @@ const getAllMerchants = (): Merchant[] => {
 const ALL_MERCHANTS = getAllMerchants();
 
 const MerchantListScreen: React.FC<Props> = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const [userLocation, setUserLocation] = useState<LocationCoords | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [displayedCount, setDisplayedCount] = useState(20); // Start with 20 merchants
+  const [displayedCount, setDisplayedCount] = useState(20);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // Use all merchants directly
@@ -279,13 +280,13 @@ const MerchantListScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <Text style={styles.merchantsTitle}>All Merchants</Text>
           <Text style={styles.headerSubtitle}>
-            {filteredMerchants.length} merchants worldwide 🌍
+            {filteredMerchants.length} merchants worldwide
           </Text>
         </View>
       </View>
@@ -377,7 +378,7 @@ const MerchantListScreen: React.FC<Props> = ({ navigation }) => {
           )}
         </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -588,7 +589,7 @@ const styles = StyleSheet.create({
   },
 
   merchantsTitle: {
-    fontSize: Typography.fontSize.lg,
+    fontSize: Typography.fontSize["2xl"],
     fontWeight: Typography.fontWeight.bold,
     color: SolanaColors.text.primary,
     marginTop: Spacing.md,
