@@ -7,6 +7,11 @@ const FILE_NAME = 'locationService.ts';
 
 class LocationService {
   private hasPermission = false;
+  private cachedLocation: LocationCoords | null = null;
+
+  getCachedLocation(): LocationCoords | null {
+    return this.cachedLocation;
+  }
 
   async requestLocationPermission(): Promise<boolean> {
     try {
@@ -67,15 +72,15 @@ class LocationService {
       logger.debug(FILE_NAME, 'Fetching location with high accuracy');
       
       const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-        timeInterval: 5000,
-        distanceInterval: 10,
+        accuracy: Location.Accuracy.Balanced,
       });
 
       const coords: LocationCoords = {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
       };
+
+      this.cachedLocation = coords;
 
       logger.info(FILE_NAME, 'Location fetched successfully', {
         latitude: coords.latitude,
