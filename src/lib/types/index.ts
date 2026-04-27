@@ -116,7 +116,7 @@ export interface PaymentResult {
 export type RootStackParamList = {
   Welcome: undefined;
   Main: undefined;
-  Dashboard: undefined;
+  Dashboard: { openSearch?: boolean } | undefined;
   Map: undefined;
   Options: undefined;
   Payment: {
@@ -133,7 +133,6 @@ export type RootStackParamList = {
     timestamp: string;
     rewardAmount?: number;
   };
-  Referral: undefined;
   MerchantRegistration: undefined;
   UserProfile: undefined;
 };

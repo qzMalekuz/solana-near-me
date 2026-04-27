@@ -13,12 +13,12 @@ import { logger } from "../lib/utils/logger";
 
 // Import screens from their new locations using index files
 import WelcomeScreen from "../screens/welcome";
-import { MapScreen, Map3DScreen, MerchantListScreen } from "../screens/map";
+import { MerchantListScreen } from "../screens/map";
 import Map3DScreenWrapper from "../screens/map/Map3DScreenWrapper";
 import { PaymentScreen, PaymentSuccessScreen } from "../screens/payment";
 import MerchantRegistrationScreen from "../screens/merchant";
 import { UserProfileScreen } from "../screens/profile";
-import { OptionsScreen, ReferralScreen } from "../screens/options";
+import { OptionsScreen } from "../screens/options";
 
 const FILE_NAME = "AppNavigator.tsx";
 
@@ -68,9 +68,9 @@ function MainTabNavigator() {
         tabBarStyle: {
           backgroundColor: "#111111",
           borderTopWidth: 0,
-          height: UI_CONSTANTS.BOTTOM_TAB_HEIGHT + insets.bottom,
+          height: UI_CONSTANTS.BOTTOM_TAB_HEIGHT + insets.bottom + 16,
           paddingBottom: insets.bottom + 12,
-          paddingTop: 8,
+          paddingTop: 16,
           position: "absolute",
           bottom: 0,
           left: 0,
@@ -148,8 +148,7 @@ export const AppNavigator: React.FC = () => {
         <Stack.Screen name="Main" component={MainTabNavigator} />
         <Stack.Screen name="Payment" component={PaymentScreen} />
         <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} />
-        <Stack.Screen name="Referral" component={ReferralScreen} />
-        <Stack.Screen
+<Stack.Screen
           name="MerchantRegistration"
           component={MerchantRegistrationScreen}
         />
