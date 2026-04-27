@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
+import { RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "../../lib/types";
 import { SolanaColors, Typography, Spacing } from "../../lib/theme";
 import { Card, Button } from "../../components/ui";
@@ -24,13 +25,12 @@ import { showMessage } from "react-native-flash-message";
 // Import processed merchants directly for optimal performance
 import processedMerchantsData from "../../lib/data/processed_merchants.json";
 
-type MerchantListScreenNavigationProp = StackNavigationProp<
-  RootStackParamList,
-  "Dashboard"
->;
+type MerchantListScreenNavigationProp = StackNavigationProp<RootStackParamList, "Dashboard">;
+type MerchantListScreenRouteProp = RouteProp<RootStackParamList, "Dashboard">;
 
 interface Props {
   navigation: MerchantListScreenNavigationProp;
+  route: MerchantListScreenRouteProp;
 }
 
 // Process all merchants globally once
@@ -90,13 +90,21 @@ const getAllMerchants = (): Merchant[] => {
 
 const ALL_MERCHANTS = getAllMerchants();
 
-const MerchantListScreen: React.FC<Props> = ({ navigation }) => {
+const MerchantListScreen: React.FC<Props> = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const [userLocation, setUserLocation] = useState<LocationCoords | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [displayedCount, setDisplayedCount] = useState(20);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const searchInputRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    if (route?.params?.openSearch) {
+      const timer = setTimeout(() => searchInputRef.current?.focus(), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [route?.params?.openSearch]);
 
   // Use all merchants directly
   const merchants = ALL_MERCHANTS;
@@ -163,7 +171,7 @@ const MerchantListScreen: React.FC<Props> = ({ navigation }) => {
   const handleMerchantPress = (merchant: Merchant) => {
     // Show coming soon toast instead of navigating
     showMessage({
-      message: "Coming Soon! 🚀",
+      message: "Coming Soon!",
       description: "Payment feature is under development. Stay tuned!",
       type: "info",
       duration: 3000,
@@ -296,6 +304,7 @@ const MerchantListScreen: React.FC<Props> = ({ navigation }) => {
         <View style={styles.searchInputContainer}>
           <Icon name="search" size={20} color={SolanaColors.text.secondary} />
           <TextInput
+            ref={searchInputRef}
             style={styles.searchInput}
             placeholder="Search merchants, categories..."
             placeholderTextColor={SolanaColors.text.secondary}
