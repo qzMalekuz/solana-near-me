@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -49,12 +49,11 @@ const OptionsScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const handleFeedback = () => {
-    // In a real app, this would open feedback form or email
-    console.log("Feedback pressed");
+    Linking.openURL("mailto:hello@kraneapps.com?subject=NearMe%20App%20Feedback");
   };
 
   const handleGitHub = () => {
-    Linking.openURL("https://github.com/solana-labs");
+    Linking.openURL("https://github.com/Krane-Apps/solana-near-me");
   };
 
   const handleSolanaInfo = () => {

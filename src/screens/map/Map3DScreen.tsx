@@ -8,6 +8,7 @@ import React, {
 import {
   View,
   Text,
+  Animated,
   StyleSheet,
   TouchableOpacity,
   Modal,
@@ -164,6 +165,16 @@ const Map3DScreenContent: React.FC<Props> = React.memo(({ navigation }) => {
   const mapRef = useRef<MapboxGL.MapView>(null);
   const cameraRef = useRef<MapboxGL.Camera>(null);
   const insets = useSafeAreaInsets();
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 2.2, duration: 1000, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
+      ])
+    ).start();
+  }, [pulseAnim]);
 
   const { authorization } = useAuthorization();
 
@@ -188,22 +199,29 @@ const Map3DScreenContent: React.FC<Props> = React.memo(({ navigation }) => {
     })),
   }), []);
 
+  const flyToLocation = useCallback((coords: LocationCoords, duration: number = 1200) => {
+    cameraRef.current?.setCamera({
+      centerCoordinate: [coords.longitude, coords.latitude],
+      zoomLevel: 15,
+      pitch: 45,
+      heading: 0,
+      animationDuration: duration,
+      animationMode: "flyTo",
+    });
+  }, []);
+
   const getUserLocation = useCallback(async () => {
     try {
       setLocationLoading(true);
-      // Fly to cached location immediately if available for instant response
       const cached = locationService.getCachedLocation?.();
       if (cached) {
         setUserLocation(cached);
-        cameraRef.current?.flyTo([cached.longitude, cached.latitude], 600);
+        flyToLocation(cached, 800);
       }
-      // Then fetch fresh location in background
       const location = await locationService.getCurrentLocation();
       if (location) {
         setUserLocation(location);
-        if (!cached) {
-          cameraRef.current?.flyTo([location.longitude, location.latitude], 800);
-        }
+        flyToLocation(location, cached ? 600 : 1400);
         return location;
       }
     } catch (error) {
@@ -212,7 +230,7 @@ const Map3DScreenContent: React.FC<Props> = React.memo(({ navigation }) => {
       setLocationLoading(false);
     }
     return null;
-  }, []);
+  }, [flyToLocation]);
 
   const handleCountryPress = (country: string) => {
     const coords = COUNTRY_COORDINATES[country];
@@ -409,6 +427,7 @@ const Map3DScreenContent: React.FC<Props> = React.memo(({ navigation }) => {
               coordinate={[userLocation.longitude, userLocation.latitude]}
             >
               <View style={styles.userLocationMarker}>
+                <Animated.View style={[styles.userLocationPulse, { transform: [{ scale: pulseAnim }] }]} />
                 <View style={styles.userLocationDot} />
               </View>
             </MapboxGL.PointAnnotation>
@@ -820,21 +839,34 @@ const styles = StyleSheet.create({
   },
 
   userLocationMarker: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: `${SolanaColors.primary}30`,
-    borderWidth: 2,
-    borderColor: SolanaColors.primary,
+    width: 24,
+    height: 24,
     justifyContent: "center",
     alignItems: "center",
   },
 
+  userLocationPulse: {
+    position: "absolute",
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: `${SolanaColors.primary}30`,
+    borderWidth: 1.5,
+    borderColor: `${SolanaColors.primary}80`,
+  },
+
   userLocationDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
     backgroundColor: SolanaColors.primary,
+    borderWidth: 2.5,
+    borderColor: "#ffffff",
+    shadowColor: SolanaColors.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 6,
+    elevation: 6,
   },
 
   mapControls: {
