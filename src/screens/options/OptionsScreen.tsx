@@ -3,13 +3,12 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   ScrollView,
-  Alert,
   Linking,
   Image,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../../lib/types";
 import { SolanaColors, Typography, Spacing } from "../../lib/theme";
@@ -36,6 +35,7 @@ interface OptionItem {
 }
 
 const OptionsScreen: React.FC<Props> = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const handleBusinessRegistration = () => {
     navigation.navigate("MerchantRegistration");
   };
@@ -153,7 +153,7 @@ const OptionsScreen: React.FC<Props> = ({ navigation }) => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
@@ -204,7 +204,7 @@ const OptionsScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={styles.footerText}>Powered by Solana blockchain</Text>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 

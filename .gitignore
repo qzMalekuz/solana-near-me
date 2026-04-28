@@ -86,7 +86,7 @@ google-services.json
 /publishing/.env
 /android/app/nearme.keystore
 /android/app/release/
-gradle.properties
+
 
 # Temporary build files
 /publishing/.asset-manifest*.json
