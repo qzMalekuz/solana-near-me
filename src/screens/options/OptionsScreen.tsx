@@ -44,10 +44,6 @@ const OptionsScreen: React.FC<Props> = ({ navigation }) => {
     navigation.navigate("UserProfile");
   };
 
-  const handleReferrals = () => {
-    navigation.navigate("Referral");
-  };
-
   const handleFeedback = () => {
     Linking.openURL("mailto:hello@kraneapps.com?subject=NearMe%20App%20Feedback");
   };
@@ -67,14 +63,6 @@ const OptionsScreen: React.FC<Props> = ({ navigation }) => {
       description: "Manage your account and wallet settings",
       icon: "person",
       onPress: handleProfile,
-      showArrow: true,
-    },
-    {
-      id: "referrals",
-      title: "Network Rewards",
-      description: "Build your network and earn from every action",
-      icon: "group-add",
-      onPress: handleReferrals,
       showArrow: true,
     },
   ];
