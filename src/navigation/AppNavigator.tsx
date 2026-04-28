@@ -69,7 +69,7 @@ function MainTabNavigator() {
           backgroundColor: "#111111",
           borderTopWidth: 0,
           height: UI_CONSTANTS.BOTTOM_TAB_HEIGHT + insets.bottom,
-          paddingBottom: insets.bottom,
+          paddingBottom: insets.bottom + 12,
           paddingTop: 8,
           position: "absolute",
           bottom: 0,
