@@ -8,6 +8,8 @@ import {
   RefreshControl,
   TextInput,
   ActivityIndicator,
+  Modal,
+  Pressable,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -97,6 +99,8 @@ const MerchantListScreen: React.FC<Props> = ({ navigation, route }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [displayedCount, setDisplayedCount] = useState(20);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [sortBy, setSortBy] = useState<"distance_asc" | "distance_desc" | "rating">("distance_asc");
+  const [showSortMenu, setShowSortMenu] = useState(false);
   const searchInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
@@ -140,19 +144,26 @@ const MerchantListScreen: React.FC<Props> = ({ navigation, route }) => {
       );
     }
 
-    // Add distance calculation and sort if location is available
+    // Add distance calculation
     if (userLocation) {
-      filtered = filtered
-        .map((merchant) => ({
-          ...merchant,
-          distance: locationService.calculateDistance(
-            userLocation.latitude,
-            userLocation.longitude,
-            merchant.latitude,
-            merchant.longitude
-          ),
-        }))
-        .sort((a, b) => (a.distance || 0) - (b.distance || 0));
+      filtered = filtered.map((merchant) => ({
+        ...merchant,
+        distance: locationService.calculateDistance(
+          userLocation.latitude,
+          userLocation.longitude,
+          merchant.latitude,
+          merchant.longitude
+        ),
+      }));
+    }
+
+    // Apply sort
+    if (sortBy === "rating") {
+      filtered = [...filtered].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    } else if (sortBy === "distance_asc") {
+      filtered = [...filtered].sort((a, b) => ((a as any).distance || 0) - ((b as any).distance || 0));
+    } else if (sortBy === "distance_desc") {
+      filtered = [...filtered].sort((a, b) => ((b as any).distance || 0) - ((a as any).distance || 0));
     }
 
     // Apply pagination - only show displayedCount items
@@ -162,7 +173,7 @@ const MerchantListScreen: React.FC<Props> = ({ navigation, route }) => {
       filteredMerchants: filtered,
       displayedMerchants: displayed,
     };
-  }, [merchants, userLocation, searchQuery, displayedCount]);
+  }, [merchants, userLocation, searchQuery, displayedCount, sortBy]);
 
   const clearSearch = () => {
     setSearchQuery("");
@@ -216,6 +227,14 @@ const MerchantListScreen: React.FC<Props> = ({ navigation, route }) => {
       setIsLoadingMore(false);
     }, 300);
   };
+
+  const SORT_OPTIONS: { key: typeof sortBy; label: string; icon: string }[] = [
+    { key: "rating",        label: "Ratings",              icon: "star" },
+    { key: "distance_asc",  label: "Distance: Low to High", icon: "arrow-upward" },
+    { key: "distance_desc", label: "Distance: High to Low", icon: "arrow-downward" },
+  ];
+
+  const activeSortLabel = SORT_OPTIONS.find((o) => o.key === sortBy)?.label ?? "Sort";
 
   const formatDistance = (distance?: number) => {
     if (!distance) return "";
@@ -297,6 +316,13 @@ const MerchantListScreen: React.FC<Props> = ({ navigation, route }) => {
             {filteredMerchants.length} merchants worldwide
           </Text>
         </View>
+        <TouchableOpacity
+          style={styles.sortButton}
+          onPress={() => setShowSortMenu(true)}
+          activeOpacity={0.7}
+        >
+          <Icon name="sort" size={22} color={SolanaColors.primary} />
+        </TouchableOpacity>
       </View>
 
       {/* Search Bar */}
@@ -314,15 +340,45 @@ const MerchantListScreen: React.FC<Props> = ({ navigation, route }) => {
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
-              <Icon
-                name="close"
-                size={20}
-                color={SolanaColors.text.secondary}
-              />
+              <Icon name="close" size={20} color={SolanaColors.text.secondary} />
             </TouchableOpacity>
           )}
         </View>
       </View>
+
+      {/* Sort Dropdown Modal */}
+      <Modal
+        visible={showSortMenu}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowSortMenu(false)}
+      >
+        <Pressable style={styles.sortOverlay} onPress={() => setShowSortMenu(false)}>
+          <View style={styles.sortMenu}>
+            <Text style={styles.sortMenuTitle}>Sort By</Text>
+            {SORT_OPTIONS.map((opt) => (
+              <TouchableOpacity
+                key={opt.key}
+                style={[styles.sortMenuItem, sortBy === opt.key && styles.sortMenuItemActive]}
+                onPress={() => { setSortBy(opt.key); setShowSortMenu(false); }}
+                activeOpacity={0.7}
+              >
+                <Icon
+                  name={opt.icon}
+                  size={18}
+                  color={sortBy === opt.key ? SolanaColors.primary : SolanaColors.text.secondary}
+                />
+                <Text style={[styles.sortMenuItemText, sortBy === opt.key && styles.sortMenuItemTextActive]}>
+                  {opt.label}
+                </Text>
+                {sortBy === opt.key && (
+                  <Icon name="check" size={16} color={SolanaColors.primary} style={styles.sortMenuCheck} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </Pressable>
+      </Modal>
 
       {displayedMerchants.length > 0 ? (
         <FlatList
@@ -668,6 +724,86 @@ const styles = StyleSheet.create({
 
   clearButton: {
     padding: Spacing.xs,
+  },
+
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
+
+  sortButton: {
+    width: 44,
+    height: 44,
+    borderRadius: Spacing.borderRadius.lg,
+    backgroundColor: SolanaColors.background.secondary,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: SolanaColors.primary + "40",
+  },
+
+  sortOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-start",
+    alignItems: "flex-end",
+    paddingTop: 140,
+    paddingRight: Spacing.layout.screenPadding,
+  },
+
+  sortMenu: {
+    backgroundColor: SolanaColors.background.card,
+    borderRadius: Spacing.borderRadius.xl,
+    paddingVertical: Spacing.sm,
+    minWidth: 220,
+    borderWidth: 1,
+    borderColor: SolanaColors.border.secondary,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 12,
+  },
+
+  sortMenuTitle: {
+    fontSize: Typography.fontSize.xs,
+    fontWeight: Typography.fontWeight.semibold,
+    color: SolanaColors.text.tertiary,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: SolanaColors.border.secondary,
+    marginBottom: Spacing.xs,
+  },
+
+  sortMenuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    gap: Spacing.md,
+  },
+
+  sortMenuItemActive: {
+    backgroundColor: SolanaColors.primary + "15",
+  },
+
+  sortMenuItemText: {
+    flex: 1,
+    fontSize: Typography.fontSize.base,
+    color: SolanaColors.text.primary,
+  },
+
+  sortMenuItemTextActive: {
+    color: SolanaColors.primary,
+    fontWeight: Typography.fontWeight.semibold,
+  },
+
+  sortMenuCheck: {
+    marginLeft: "auto",
   },
 });
 

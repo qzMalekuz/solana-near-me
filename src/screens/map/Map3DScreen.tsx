@@ -130,21 +130,21 @@ const getCategoryColor = (category: string): string => {
 };
 
 // Country coordinates for navigation
-const COUNTRY_COORDINATES: { [key: string]: [number, number] } = {
-  Switzerland: [8.2275, 46.8182],
-  Germany: [10.4515, 51.1657],
-  France: [2.3522, 46.2276],
-  Italy: [12.5674, 41.8719],
-  Spain: [-3.7492, 40.4637],
-  UK: [-0.1276, 51.5074],
-  USA: [-95.7129, 37.0902],
-  Canada: [-106.3468, 56.1304],
-  Brazil: [-47.8825, -15.7942],
-  India: [77.1025, 20.5937],
-  China: [104.1954, 35.8617],
-  Japan: [138.2529, 36.2048],
-  Australia: [133.7751, -25.2744],
-  Russia: [105.3188, 61.524],
+const COUNTRY_COORDINATES: { [key: string]: { center: [number, number]; zoom: number } } = {
+  Switzerland: { center: [8.2275, 46.8182], zoom: 7 },
+  Germany:     { center: [10.4515, 51.1657], zoom: 5 },
+  France:      { center: [2.3522, 46.2276], zoom: 5 },
+  Italy:       { center: [12.5674, 41.8719], zoom: 5 },
+  Spain:       { center: [-3.7492, 40.4637], zoom: 5 },
+  UK:          { center: [-0.1276, 51.5074], zoom: 5 },
+  USA:         { center: [-95.7129, 37.0902], zoom: 3.5 },
+  Canada:      { center: [-96.3468, 56.1304], zoom: 3 },
+  Brazil:      { center: [-51.9253, -14.235], zoom: 3.5 },
+  India:       { center: [78.9629, 20.5937], zoom: 4 },
+  China:       { center: [104.1954, 35.8617], zoom: 3.5 },
+  Japan:       { center: [138.2529, 36.2048], zoom: 5 },
+  Australia:   { center: [133.7751, -25.2744], zoom: 3.5 },
+  Russia:      { center: [105.3188, 61.524], zoom: 3 },
 };
 
 const Map3DScreenContent: React.FC<Props> = React.memo(({ navigation }) => {
@@ -266,7 +266,14 @@ const Map3DScreenContent: React.FC<Props> = React.memo(({ navigation }) => {
     stopRotation();
     const coords = COUNTRY_COORDINATES[country];
     if (coords) {
-      cameraRef.current?.flyTo(coords, 2000);
+      cameraRef.current?.setCamera({
+        centerCoordinate: coords.center,
+        zoomLevel: coords.zoom,
+        pitch: 30,
+        heading: 0,
+        animationDuration: 1500,
+        animationMode: "flyTo",
+      });
     }
   };
 
