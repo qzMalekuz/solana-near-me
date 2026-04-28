@@ -1,24 +1,19 @@
 // Mapbox Configuration
-// Add your Mapbox access token here or use environment variables
-import { MAPBOX_ACCESS_TOKEN } from '@env';
 import MapboxGL from '@rnmapbox/maps';
 
-// Initialize Mapbox with access token
-if (MAPBOX_ACCESS_TOKEN) {
-  MapboxGL.setAccessToken(MAPBOX_ACCESS_TOKEN);
-}
+const TOKEN = process.env.MAPBOX_ACCESS_TOKEN ?? '';
+
+MapboxGL.setAccessToken(TOKEN);
 
 export const MAPBOX_CONFIG = {
-  // Replace this with your actual Mapbox access token
-  // Get your token from: https://account.mapbox.com/access-tokens/
-  ACCESS_TOKEN: MAPBOX_ACCESS_TOKEN || 'YOUR_MAPBOX_ACCESS_TOKEN_HERE',
+  ACCESS_TOKEN: TOKEN,
   
   // Default map settings
   DEFAULT_CAMERA: {
-    centerCoordinate: [77.5946, 12.9716], // Bangalore, India [longitude, latitude]
-    zoomLevel: 10,
-    pitch: 45, // 3D tilt angle (0-60 degrees)
-    heading: 0, // Map rotation (0-360 degrees)
+    centerCoordinate: [20.0, 20.0], // Global center showing the 3D globe
+    zoomLevel: 2,
+    pitch: 40,
+    heading: 0,
   },
   
   // Map style URLs (you can customize these) - Using dark mode for Solana theme

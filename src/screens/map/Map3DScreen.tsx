@@ -28,12 +28,10 @@ import MapboxGL from "@rnmapbox/maps";
 
 // Internal imports
 import { RootStackParamList } from "../../lib/types";
-import { Button } from "../../components/ui";
 import {
   SolanaColors,
   Typography,
   Spacing,
-  createDarkGlassEffect,
 } from "../../lib/theme";
 import { useAuthorization } from "../../providers/AppProviders";
 import { locationService } from "../../lib/services/locationService";
@@ -132,21 +130,21 @@ const getCategoryColor = (category: string): string => {
 };
 
 // Country coordinates for navigation
-const COUNTRY_COORDINATES: { [key: string]: [number, number] } = {
-  Switzerland: [8.2275, 46.8182],
-  Germany: [10.4515, 51.1657],
-  France: [2.3522, 46.2276],
-  Italy: [12.5674, 41.8719],
-  Spain: [-3.7492, 40.4637],
-  UK: [-0.1276, 51.5074],
-  USA: [-95.7129, 37.0902],
-  Canada: [-106.3468, 56.1304],
-  Brazil: [-47.8825, -15.7942],
-  India: [77.1025, 20.5937],
-  China: [104.1954, 35.8617],
-  Japan: [138.2529, 36.2048],
-  Australia: [133.7751, -25.2744],
-  Russia: [105.3188, 61.524],
+const COUNTRY_COORDINATES: { [key: string]: { center: [number, number]; zoom: number } } = {
+  Switzerland: { center: [8.2275, 46.8182], zoom: 7 },
+  Germany:     { center: [10.4515, 51.1657], zoom: 5 },
+  France:      { center: [2.3522, 46.2276], zoom: 5 },
+  Italy:       { center: [12.5674, 41.8719], zoom: 5 },
+  Spain:       { center: [-3.7492, 40.4637], zoom: 5 },
+  UK:          { center: [-0.1276, 51.5074], zoom: 5 },
+  USA:         { center: [-95.7129, 37.0902], zoom: 3.5 },
+  Canada:      { center: [-96.3468, 56.1304], zoom: 3 },
+  Brazil:      { center: [-51.9253, -14.235], zoom: 3.5 },
+  India:       { center: [78.9629, 20.5937], zoom: 4 },
+  China:       { center: [104.1954, 35.8617], zoom: 3.5 },
+  Japan:       { center: [138.2529, 36.2048], zoom: 5 },
+  Australia:   { center: [133.7751, -25.2744], zoom: 3.5 },
+  Russia:      { center: [105.3188, 61.524], zoom: 3 },
 };
 
 const Map3DScreenContent: React.FC<Props> = React.memo(({ navigation }) => {
@@ -166,6 +164,32 @@ const Map3DScreenContent: React.FC<Props> = React.memo(({ navigation }) => {
   const cameraRef = useRef<MapboxGL.Camera>(null);
   const insets = useSafeAreaInsets();
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const isRotating = useRef(true);
+  const rotHeading = useRef(0);
+  const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rotTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopRotation = useCallback(() => {
+    isRotating.current = false;
+    if (rotTimer.current) { clearInterval(rotTimer.current); rotTimer.current = null; }
+    if (idleTimer.current) { clearTimeout(idleTimer.current); }
+    idleTimer.current = setTimeout(() => {
+      isRotating.current = true;
+      rotTimer.current = setInterval(() => {
+        rotHeading.current = (rotHeading.current - 0.25 + 360) % 360;
+        cameraRef.current?.setCamera({ heading: rotHeading.current, animationDuration: 60, animationMode: "easeTo" });
+      }, 60);
+    }, 5000);
+  }, []);
+
+  const startRotation = useCallback(() => {
+    if (rotTimer.current) return;
+    isRotating.current = true;
+    rotTimer.current = setInterval(() => {
+      rotHeading.current = (rotHeading.current - 0.25 + 360) % 360;
+      cameraRef.current?.setCamera({ heading: rotHeading.current, animationDuration: 60, animationMode: "easeTo" });
+    }, 60);
+  }, []);
 
   useEffect(() => {
     Animated.loop(
@@ -174,7 +198,12 @@ const Map3DScreenContent: React.FC<Props> = React.memo(({ navigation }) => {
         Animated.timing(pulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
       ])
     ).start();
-  }, [pulseAnim]);
+    startRotation();
+    return () => {
+      if (rotTimer.current) clearInterval(rotTimer.current);
+      if (idleTimer.current) clearTimeout(idleTimer.current);
+    };
+  }, [pulseAnim, startRotation]);
 
   const { authorization } = useAuthorization();
 
@@ -211,6 +240,7 @@ const Map3DScreenContent: React.FC<Props> = React.memo(({ navigation }) => {
   }, []);
 
   const getUserLocation = useCallback(async () => {
+    stopRotation();
     try {
       setLocationLoading(true);
       const cached = locationService.getCachedLocation?.();
@@ -230,16 +260,25 @@ const Map3DScreenContent: React.FC<Props> = React.memo(({ navigation }) => {
       setLocationLoading(false);
     }
     return null;
-  }, [flyToLocation]);
+  }, [flyToLocation, stopRotation]);
 
   const handleCountryPress = (country: string) => {
+    stopRotation();
     const coords = COUNTRY_COORDINATES[country];
     if (coords) {
-      cameraRef.current?.flyTo(coords, 2000);
+      cameraRef.current?.setCamera({
+        centerCoordinate: coords.center,
+        zoomLevel: coords.zoom,
+        pitch: 30,
+        heading: 0,
+        animationDuration: 1500,
+        animationMode: "flyTo",
+      });
     }
   };
 
-  const onMarkerPress = useCallback((event: any) => {
+  const onMarkerPress = useCallback(async (event: any) => {
+    stopRotation();
     let feature = event;
 
     if (event?.features && Array.isArray(event.features) && event.features.length > 0) {
@@ -249,15 +288,31 @@ const Map3DScreenContent: React.FC<Props> = React.memo(({ navigation }) => {
       feature = event.nativeEvent.payload;
     }
 
-    const { properties } = feature || {};
+    const { properties, geometry } = feature || {};
     if (!properties) return;
 
+    // Cluster tapped — zoom in to expand it
+    if (properties.cluster) {
+      const [lng, lat] = geometry?.coordinates ?? [];
+      if (lng !== undefined && lat !== undefined) {
+        const currentZoomLevel = await mapRef.current?.getZoom() ?? 2;
+        cameraRef.current?.setCamera({
+          centerCoordinate: [lng, lat],
+          zoomLevel: Math.min(currentZoomLevel + 3, 16),
+          animationDuration: 600,
+          animationMode: "flyTo",
+        });
+      }
+      return;
+    }
+
+    // Individual merchant tapped
     const featureId = feature.id || properties.id;
     const merchant = ALL_MERCHANTS.find((m) => m.id === featureId);
     if (merchant) {
       setSelectedMerchant(merchant);
     }
-  }, []);
+  }, [stopRotation]);
 
   const handlePayPress = async () => {
     if (!selectedMerchant) return;
@@ -345,12 +400,21 @@ const Map3DScreenContent: React.FC<Props> = React.memo(({ navigation }) => {
     }
   };
 
-  const handleResetNorth = () => {
-    cameraRef.current?.setCamera({
-      heading: 0,
-      pitch: 45,
-      animationDuration: 400,
-    });
+  const handleResetNorth = async () => {
+    stopRotation();
+    rotHeading.current = 0;
+    try {
+      const center = await mapRef.current?.getCenter();
+      const zoom = await mapRef.current?.getZoom();
+      cameraRef.current?.setCamera({
+        centerCoordinate: center ?? MAPBOX_CONFIG.DEFAULT_CAMERA.centerCoordinate,
+        zoomLevel: zoom ?? currentZoom,
+        heading: 0,
+        pitch: 45,
+        animationDuration: 600,
+        animationMode: "easeTo",
+      });
+    } catch {}
   };
 
   const handleZoomIn = async () => {
@@ -380,13 +444,14 @@ const Map3DScreenContent: React.FC<Props> = React.memo(({ navigation }) => {
   };
 
   useEffect(() => {
-    getUserLocation();
-  }, [getUserLocation]);
+    locationService.getCurrentLocation().catch(() => {});
+  }, []);
+
 
   return (
     <View style={styles.container}>
       {/* 3D Map — full screen behind everything */}
-      <View style={styles.mapContainer}>
+      <View style={styles.mapContainer} onTouchStart={stopRotation}>
         <MapboxGL.MapView
           ref={mapRef}
           style={styles.map}
@@ -518,64 +583,32 @@ const Map3DScreenContent: React.FC<Props> = React.memo(({ navigation }) => {
             />
           </MapboxGL.ShapeSource>
 
-          {currentZoom >= 12 &&
-            ALL_MERCHANTS.slice(0, 100).map((merchant, index) => (
-              <MapboxGL.PointAnnotation
-                key={`clickable-${merchant.id}-${index}`}
-                id={`clickable-${merchant.id}`}
-                coordinate={[merchant.longitude, merchant.latitude]}
-                onSelected={() => setSelectedMerchant(merchant)}
-              >
-                <View
-                  style={[
-                    styles.customMarkerOptimized,
-                    { backgroundColor: getCategoryColor(merchant.category) },
-                  ]}
-                >
-                  <Text style={styles.markerEmojiOptimized}>
-                    {merchant.category === "Food & Drinks" ? "🍕"
-                      : merchant.category === "Tech Services" ? "💻"
-                      : merchant.category === "Transportation" ? "🚗"
-                      : merchant.category === "Travel" ? "✈️"
-                      : merchant.category === "Services" ? "🏢"
-                      : merchant.category === "Electronics" ? "📱"
-                      : merchant.category === "Retail" ? "🛍️"
-                      : merchant.category === "Gift Cards" ? "🎁"
-                      : merchant.category === "Marketplace" ? "🏪"
-                      : merchant.category === "Accommodation" ? "🏨"
-                      : merchant.category === "Marketing" ? "📈"
-                      : merchant.category === "Education" ? "🎓"
-                      : "🏪"}
-                  </Text>
-                </View>
-              </MapboxGL.PointAnnotation>
-            ))}
         </MapboxGL.MapView>
 
         {/* Map Controls */}
         <View style={styles.mapControls}>
           <TouchableOpacity
-            style={[styles.controlButton, locationLoading && styles.controlButtonLoading]}
+            style={[styles.controlButton, !!userLocation && styles.controlButtonPrimary, !!locationLoading && styles.controlButtonLoading]}
             onPress={getUserLocation}
-            activeOpacity={0.7}
+            activeOpacity={0.75}
             disabled={locationLoading}
           >
             <Icon name={locationLoading ? "refresh" : "my-location"} size={20} color={SolanaColors.white} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.controlButton} onPress={handleZoomIn} activeOpacity={0.7}>
-            <Icon name="add" size={20} color={SolanaColors.white} />
+          <TouchableOpacity style={styles.controlButton} onPress={handleZoomIn} activeOpacity={0.75}>
+            <Icon name="add" size={22} color={SolanaColors.white} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.controlButton} onPress={handleZoomOut} activeOpacity={0.7}>
-            <Icon name="remove" size={20} color={SolanaColors.white} />
+          <TouchableOpacity style={styles.controlButton} onPress={handleZoomOut} activeOpacity={0.75}>
+            <Icon name="remove" size={22} color={SolanaColors.white} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.controlButton} onPress={toggleMapStyle} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.controlButton} onPress={toggleMapStyle} activeOpacity={0.75}>
             <Icon name="layers" size={20} color={SolanaColors.white} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.controlButton} onPress={handleResetNorth} activeOpacity={0.7}>
+          <TouchableOpacity style={[styles.controlButton, styles.controlButtonPrimary]} onPress={handleResetNorth} activeOpacity={0.75}>
             <Icon name="explore" size={20} color={SolanaColors.white} />
           </TouchableOpacity>
         </View>
@@ -584,7 +617,7 @@ const Map3DScreenContent: React.FC<Props> = React.memo(({ navigation }) => {
         <View style={[styles.header, { top: insets.top + 6 }]}>
           <TouchableOpacity
             style={styles.searchButton}
-            onPress={() => console.log("Search pressed")}
+            onPress={() => { stopRotation(); navigation.navigate("Dashboard", { openSearch: true }); }}
             activeOpacity={0.7}
           >
             <Icon name="search" size={20} color="#9e9e9e" />
@@ -634,94 +667,81 @@ const Map3DScreenContent: React.FC<Props> = React.memo(({ navigation }) => {
         </View>
       </View>
 
-      {/* Merchant Details Modal */}
+      {/* Merchant Details Sheet */}
       <Modal
         visible={!!selectedMerchant}
         transparent={true}
         animationType="slide"
         onRequestClose={() => setSelectedMerchant(null)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            {selectedMerchant && (
-              <>
-                <View style={styles.modalHeader}>
-                  <View style={styles.merchantInfo}>
-                    <View style={styles.merchantNameRow}>
-                      <Text style={styles.merchantName}>{selectedMerchant.name}</Text>
-                      <View style={styles.verifiedBadge}>
-                        <Icon name="verified" size={12} color={SolanaColors.status.success} />
-                        <Text style={styles.verifiedText}>Verified</Text>
-                      </View>
-                    </View>
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setSelectedMerchant(null)}
+        />
+        <View style={styles.modalContent}>
+          {selectedMerchant && (
+            <>
+              {/* Drag handle */}
+              <View style={styles.dragHandle} />
+
+              {/* Header row */}
+              <View style={styles.modalHeader}>
+                <View style={styles.merchantInfo}>
+                  <Text style={styles.merchantName} numberOfLines={2}>{selectedMerchant.name}</Text>
+                  <View style={styles.merchantMetaRow}>
                     <Text style={styles.merchantCategory}>{selectedMerchant.category}</Text>
-                    <View style={styles.ratingContainer}>
-                      <Text style={styles.ratingStars}>
-                        {"★".repeat(Math.floor(selectedMerchant.rating || 4))}
-                      </Text>
-                      <Text style={styles.ratingText}>
-                        {selectedMerchant.rating?.toFixed(1) || "4.0"} rating
-                      </Text>
+                    <View style={styles.verifiedBadge}>
+                      <Icon name="verified" size={11} color={SolanaColors.status.success} />
+                      <Text style={styles.verifiedText}>Verified</Text>
                     </View>
                   </View>
-                  <TouchableOpacity
-                    style={styles.closeButton}
-                    onPress={() => setSelectedMerchant(null)}
-                  >
-                    <Icon name="close" size={16} color={SolanaColors.white} />
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.merchantDetails}>
-                  <Text style={styles.merchantAddress}>📍 {selectedMerchant.address}</Text>
-                  <Text style={styles.acceptedTokens}>
-                    💳 Accepts: {selectedMerchant.acceptedTokens.join(", ")}
-                  </Text>
-                </View>
-
-                <View style={styles.modalActions}>
-                  <View style={styles.actionRow}>
-                    <TouchableOpacity
-                      style={styles.googleMapsButton}
-                      onPress={() => {
-                        if (selectedMerchant?.googleMapsLink) {
-                          Linking.openURL(selectedMerchant.googleMapsLink);
-                        }
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <Icon name="map" size={20} color={SolanaColors.white} />
-                      <Text style={styles.googleMapsButtonText}>Directions</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[
-                        styles.payButton,
-                        (!selectedMerchant.walletAddress || selectedMerchant.walletAddress.trim() === "") &&
-                          styles.payButtonDisabled,
-                      ]}
-                      onPress={handlePayPress}
-                      activeOpacity={0.7}
-                    >
-                      <Icon
-                        name={
-                          selectedMerchant.walletAddress && selectedMerchant.walletAddress.trim() !== ""
-                            ? "payment"
-                            : "error_outline"
-                        }
-                        size={20}
-                        color={SolanaColors.white}
-                      />
-                      <Text style={styles.payButtonText}>
-                        {selectedMerchant.walletAddress && selectedMerchant.walletAddress.trim() !== ""
-                          ? "Pay Now"
-                          : "Not Verified"}
-                      </Text>
-                    </TouchableOpacity>
+                  <View style={styles.ratingContainer}>
+                    <Text style={styles.ratingStars}>{"★".repeat(Math.floor(selectedMerchant.rating || 4))}</Text>
+                    <Text style={styles.ratingText}>{selectedMerchant.rating?.toFixed(1) || "4.0"}</Text>
                   </View>
                 </View>
-              </>
-            )}
-          </View>
+                <TouchableOpacity style={styles.closeButton} onPress={() => setSelectedMerchant(null)}>
+                  <Icon name="close" size={18} color={SolanaColors.white} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Divider */}
+              <View style={styles.divider} />
+
+              {/* Details */}
+              <View style={styles.merchantDetails}>
+                <View style={styles.detailRow}>
+                  <Icon name="place" size={16} color={SolanaColors.primary} />
+                  <Text style={styles.merchantAddress}>{selectedMerchant.address}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Icon name="account-balance-wallet" size={16} color={SolanaColors.primary} />
+                  <Text style={styles.acceptedTokens}>Accepts: {selectedMerchant.acceptedTokens.join(", ")}</Text>
+                </View>
+              </View>
+
+              {/* Actions */}
+              <View style={styles.actionRow}>
+                <TouchableOpacity
+                  style={styles.googleMapsButton}
+                  onPress={() => { if (selectedMerchant?.googleMapsLink) Linking.openURL(selectedMerchant.googleMapsLink); }}
+                  activeOpacity={0.8}
+                >
+                  <Icon name="directions" size={20} color={SolanaColors.white} />
+                  <Text style={styles.googleMapsButtonText}>Directions</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.payButton, (!selectedMerchant.walletAddress || selectedMerchant.walletAddress.trim() === "") && styles.payButtonDisabled]}
+                  onPress={handlePayPress}
+                  activeOpacity={0.8}
+                >
+                  <Icon name={selectedMerchant.walletAddress?.trim() ? "payment" : "error-outline"} size={20} color={SolanaColors.white} />
+                  <Text style={styles.payButtonText}>{selectedMerchant.walletAddress?.trim() ? "Pay Now" : "Not Verified"}</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
         </View>
       </Modal>
     </View>
@@ -881,9 +901,21 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    ...createDarkGlassEffect(0.3),
+    backgroundColor: "rgba(18,18,18,0.92)",
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.18)",
     justifyContent: "center",
     alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.55,
+    shadowRadius: 4,
+    elevation: 6,
+  },
+
+  controlButtonPrimary: {
+    backgroundColor: SolanaColors.primary,
+    borderColor: `${SolanaColors.primary}60`,
   },
 
   controlButtonLoading: {
@@ -891,44 +923,45 @@ const styles = StyleSheet.create({
   },
 
 
-  customMarkerOptimized: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: SolanaColors.white,
-  },
-
-  markerEmojiOptimized: {
-    fontSize: 10,
-    textAlign: "center",
-  },
 
   modalOverlay: {
     flex: 1,
-    backgroundColor: SolanaColors.overlay.dark,
-    justifyContent: "flex-end",
+    backgroundColor: "transparent",
   },
 
   modalContent: {
-    ...createDarkGlassEffect(0.3),
-    borderTopLeftRadius: Spacing.borderRadius["2xl"],
-    borderTopRightRadius: Spacing.borderRadius["2xl"],
-    padding: Spacing["2xl"],
-    maxHeight: "70%",
+    backgroundColor: "#111111",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 36,
+  },
+
+  dragHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignSelf: "center",
+    marginBottom: 20,
+  },
+
+  divider: {
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    marginVertical: 16,
   },
 
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: Spacing.lg,
   },
 
   merchantInfo: {
     flex: 1,
+    paddingRight: 12,
   },
 
   merchantNameRow: {
@@ -938,103 +971,116 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
 
+  merchantMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 6,
+    marginBottom: 8,
+  },
+
   merchantName: {
-    fontSize: Typography.fontSize["2xl"],
-    fontWeight: Typography.fontWeight.bold,
+    fontSize: 22,
+    fontWeight: "700",
     color: SolanaColors.text.primary,
-    flex: 1,
+    lineHeight: 28,
   },
 
   verifiedBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: `${SolanaColors.status.success}20`,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: Spacing.borderRadius.md,
-    gap: Spacing.xs,
+    backgroundColor: `${SolanaColors.status.success}22`,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 20,
+    gap: 4,
   },
 
   verifiedText: {
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.medium,
+    fontSize: 11,
+    fontWeight: "600",
     color: SolanaColors.status.success,
   },
 
   merchantCategory: {
-    fontSize: Typography.fontSize.base,
+    fontSize: Typography.fontSize.sm,
     color: SolanaColors.text.secondary,
-    marginBottom: Spacing.sm,
+    fontWeight: "500",
   },
 
   ratingContainer: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 4,
   },
 
   ratingStars: {
-    color: SolanaColors.accent,
-    fontSize: Typography.fontSize.base,
-    marginRight: Spacing.sm,
+    color: "#F5A623",
+    fontSize: 14,
   },
 
   ratingText: {
     color: SolanaColors.text.secondary,
     fontSize: Typography.fontSize.sm,
+    fontWeight: "500",
   },
 
   closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    ...createDarkGlassEffect(0.2),
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.1)",
     justifyContent: "center",
     alignItems: "center",
   },
 
   merchantDetails: {
-    marginBottom: Spacing.xl,
-    gap: Spacing.sm,
+    gap: 10,
+  },
+
+  detailRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
   },
 
   merchantAddress: {
     fontSize: Typography.fontSize.sm,
     color: SolanaColors.text.secondary,
     lineHeight: 20,
+    flex: 1,
   },
 
   acceptedTokens: {
     fontSize: Typography.fontSize.sm,
     color: SolanaColors.text.secondary,
     lineHeight: 20,
-  },
-
-  modalActions: {
-    paddingTop: Spacing.lg,
+    flex: 1,
   },
 
   actionRow: {
     flexDirection: "row",
-    gap: Spacing.md,
-    alignItems: "center",
+    gap: 12,
+    marginTop: 24,
   },
 
   googleMapsButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: SolanaColors.primary,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderRadius: Spacing.borderRadius.lg,
-    gap: Spacing.sm,
-    minWidth: 100,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderRadius: 14,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
   },
 
   googleMapsButtonText: {
     color: SolanaColors.white,
     fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.medium,
+    fontWeight: "600",
   },
 
   payButton: {
@@ -1042,17 +1088,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: SolanaColors.primary,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderRadius: Spacing.borderRadius.lg,
-    gap: Spacing.sm,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderRadius: 14,
+    gap: 8,
     flex: 1,
   },
 
   payButtonText: {
     color: SolanaColors.white,
     fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.medium,
+    fontWeight: "700",
   },
 
   payButtonDisabled: {
