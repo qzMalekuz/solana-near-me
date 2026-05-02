@@ -19,9 +19,13 @@ export function ConnectWalletButton() {
         await disconnect();
         showMessage({
           message: "Wallet Disconnected",
-          description: "Your wallet has been successfully disconnected",
-          type: "success",
-          duration: 2000,
+          description: "Your wallet has been disconnected",
+          type: "danger",
+          style: { backgroundColor: "#c0392b" },
+          titleStyle: { color: "#ffffff", fontWeight: "700" },
+          textStyle: { color: "#ffffff" },
+          duration: 2500,
+          animated: true,
         });
       } catch (error) {
         logger.error(FILE_NAME, "Failed to disconnect wallet", error);
@@ -40,7 +44,10 @@ export function ConnectWalletButton() {
           message: "Wallet Connected",
           description: "Your wallet has been successfully connected",
           type: "success",
-          duration: 2000,
+          backgroundColor: "#27ae60",
+          duration: 2500,
+          icon: "success",
+          animated: true,
         });
       } catch (error) {
         logger.error(FILE_NAME, "Failed to connect wallet", error);

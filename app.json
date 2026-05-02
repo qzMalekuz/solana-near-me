@@ -17,7 +17,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.bluntbrain.NearMe",
       "config": {
-        "googleMapsApiKey": "AIzaSyAlbJEjGnDwzIwRJJomimekdLD3z7WxrRs"
+        "googleMapsApiKey": "AIzaSyC7XymkYEBXg7cbI2b0RVeO1pFCQLAwIu0"
       }
     },
     "android": {
@@ -39,7 +39,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "5f456211-49cb-495e-8e69-11e0affd44e0"
+        "projectId": "8d689937-4fa6-4e79-9045-b22ede8a799e"
       }
     }
   }

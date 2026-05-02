@@ -3,6 +3,7 @@ import "./polyfills";
 
 import React, { useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
+import { StatusBar as RNStatusBar } from "react-native";
 import FlashMessage from "react-native-flash-message";
 import { AppNavigator } from "./src/navigation/AppNavigator";
 import { AppProviders } from "./src/providers/AppProviders";
@@ -82,7 +83,14 @@ export default function App() {
     <AppProviders>
       <StatusBar style="light" backgroundColor="#1a1a1a" />
       <AppNavigator />
-      <FlashMessage position="top" />
+      <FlashMessage
+        position="bottom"
+        style={{ borderRadius: 16, marginHorizontal: 16, marginBottom: 24 }}
+        titleStyle={{ fontWeight: '700', fontSize: 15 }}
+        textStyle={{ fontSize: 13, opacity: 0.9 }}
+        animationDuration={400}
+        floating={true}
+      />
     </AppProviders>
   );
 }

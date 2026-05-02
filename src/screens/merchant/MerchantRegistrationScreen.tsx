@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   ActivityIndicator,
   TouchableOpacity,
@@ -689,7 +688,7 @@ const MerchantRegistrationScreen: React.FC<Props> = ({ navigation }) => {
         <Text style={styles.sectionTitle}>Business Google Maps Link</Text>
         <TextInput
           label="Google Maps URL"
-          placeholder="https://maps.app.goo.gl/... or https://maps.google.com/..."
+          placeholder="Paste your Google Maps link here..."
           value={formData.googleMapsLink}
           onChangeText={handleMapsUrlInput}
           containerStyle={styles.inputContainer}
@@ -884,7 +883,7 @@ const MerchantRegistrationScreen: React.FC<Props> = ({ navigation }) => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -950,7 +949,7 @@ const MerchantRegistrationScreen: React.FC<Props> = ({ navigation }) => {
           </Text>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -966,7 +965,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: Spacing.layout.screenPadding,
-    paddingVertical: Spacing.lg,
+    paddingVertical: Spacing.xl,
     borderBottomWidth: 1,
     borderBottomColor: SolanaColors.border.secondary,
   },
@@ -997,13 +996,14 @@ const styles = StyleSheet.create({
 
   scrollContent: {
     paddingHorizontal: Spacing.layout.screenPadding,
+    paddingTop: Spacing.xl,
   },
 
   // Hero Section
   heroSection: {
     alignItems: "center",
-    paddingVertical: Spacing["2xl"],
-    marginBottom: Spacing.xl,
+    paddingVertical: Spacing["3xl"],
+    marginBottom: Spacing["2xl"],
   },
 
   heroTitle: {
@@ -1137,18 +1137,18 @@ const styles = StyleSheet.create({
 
   // Form Sections
   formSection: {
-    marginBottom: Spacing["2xl"],
+    marginBottom: Spacing["3xl"],
   },
 
   sectionTitle: {
     fontSize: Typography.fontSize.lg,
     fontWeight: Typography.fontWeight.bold,
     color: SolanaColors.text.primary,
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.xl,
   },
 
   inputContainer: {
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.xl,
   },
 
   // Tab Selector

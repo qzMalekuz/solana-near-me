@@ -1,15 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   ScrollView,
-  Alert,
   Linking,
   Image,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../../lib/types";
 import { SolanaColors, Typography, Spacing } from "../../lib/theme";
@@ -36,6 +35,7 @@ interface OptionItem {
 }
 
 const OptionsScreen: React.FC<Props> = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const handleBusinessRegistration = () => {
     navigation.navigate("MerchantRegistration");
   };
@@ -44,17 +44,12 @@ const OptionsScreen: React.FC<Props> = ({ navigation }) => {
     navigation.navigate("UserProfile");
   };
 
-  const handleReferrals = () => {
-    navigation.navigate("Referral");
-  };
-
   const handleFeedback = () => {
-    // In a real app, this would open feedback form or email
-    console.log("Feedback pressed");
+    Linking.openURL("mailto:hello@kraneapps.com?subject=NearMe%20App%20Feedback");
   };
 
   const handleGitHub = () => {
-    Linking.openURL("https://github.com/solana-labs");
+    Linking.openURL("https://github.com/Krane-Apps/solana-near-me");
   };
 
   const handleSolanaInfo = () => {
@@ -68,14 +63,6 @@ const OptionsScreen: React.FC<Props> = ({ navigation }) => {
       description: "Manage your account and wallet settings",
       icon: "person",
       onPress: handleProfile,
-      showArrow: true,
-    },
-    {
-      id: "referrals",
-      title: "Network Rewards",
-      description: "Build your network and earn from every action",
-      icon: "group-add",
-      onPress: handleReferrals,
       showArrow: true,
     },
   ];
@@ -153,7 +140,7 @@ const OptionsScreen: React.FC<Props> = ({ navigation }) => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
@@ -204,7 +191,7 @@ const OptionsScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={styles.footerText}>Powered by Solana blockchain</Text>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
